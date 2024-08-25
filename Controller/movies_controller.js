@@ -76,10 +76,27 @@ exports.GetAllMovies = async (req, res) => {
     }
 
   } catch (error) {
-    console.error(error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+exports.GetAllCategory = async (req, res) => {
+  try {
+    const ActorsCollection=await Actors(); 
+    const GenresCollection =await Genres();
+    const DirectorsCollection =await Directors();
+
+    const ActorData = await ActorsCollection.find({}).toArray();
+    const GenresData = await GenresCollection.find({}).toArray();
+    const DirectorData = await DirectorsCollection.find({}).toArray();
+
+    return res.status(200).json({ ActorData, GenresData, DirectorData });
+  } catch (error) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
 
 exports.AddNewMovie = async (req, res) => {
   const { title, description, rating, actor_id, director_id, genres_id } = req.body;
@@ -105,6 +122,24 @@ exports.AddNewMovie = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+
+exports.GetSingleMovie=async(req,res)=>{
+  const {id}=req.params;
+  try{
+    const movieCollection=await Movies();
+    const data = await movieCollection.findOne({ _id: new ObjectId(id) });
+    if(data){
+      return res.status(200).send(data);
+    }else{
+      return res.status(400).json({error:"Empty data"});
+    }
+
+
+  }catch(error){
+    return res.status(500).json({error:"Internal server error"})
+  }
+}
 
 exports.CreateGenres = async (req, res) => {
   const { genres } = req.body;
