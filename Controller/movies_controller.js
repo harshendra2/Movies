@@ -1,4 +1,5 @@
 const { ObjectId } = require('mongodb');
+const path=require('path');
 const Movies = require('../Models/Movies_Models');
 const Actors = require('../Models/Actors_Models');
 const Genres = require('../Models/Genres_Models');
@@ -62,23 +63,32 @@ exports.GetAllMovies = async (req, res) => {
       }
     ]).toArray();
 
-    if (data.length > 0) {
-      const filteredData = data.map(item => ({
-        ...item,
-        Actors: Array.isArray(item.Actors) ? item.Actors.map(actor => ({ id: actor._id, name: actor.actor })) : [],
-        Genres: Array.isArray(item.Genres) ? item.Genres.map(genre => ({ id: genre._id, name: genre.genres })) : [],
-        Directors: Array.isArray(item.Directors) ? item.Directors.map(director => ({ id: director._id, name: director.director })) : []
-      }));
+    if (data && data.length > 0) {
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
 
-      return res.status(200).json(filteredData);
+      const updatedData = data.map(movie => {
+        // Construct the full image URL
+        const imageUrl = movie.image ? `${baseUrl}/${movie.image.replace(/\\/g, '/')}` : null;
+
+        return {
+          ...movie,
+          image: imageUrl, // Replace the image field with the full URL
+          Actors: Array.isArray(movie.Actors) ? movie.Actors.map(actor => ({ id: actor._id, name: actor.actor })) : [],
+          Genres: Array.isArray(movie.Genres) ? movie.Genres.map(genre => ({ id: genre._id, name: genre.genres })) : [],
+          Directors: Array.isArray(movie.Directors) ? movie.Directors.map(director => ({ id: director._id, name: director.director })) : []
+        };
+      });
+
+      return res.status(200).json(updatedData);
     } else {
       return res.status(404).json({ error: "No movies found" });
     }
-
   } catch (error) {
+    console.error(error); // Log the error for debugging
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
 
 exports.GetAllCategory = async (req, res) => {
   try {
@@ -101,7 +111,9 @@ exports.GetAllCategory = async (req, res) => {
 exports.AddNewMovie = async (req, res) => {
   const { title, description, rating, actor_id, director_id, genres_id } = req.body;
   try {
+    
     const MovieCollection = await Movies();
+    const imagePath = req.file ? path.join('Images/',req.file.filename) : null;
     const newMovie = {
       title,
       description,
@@ -109,7 +121,7 @@ exports.AddNewMovie = async (req, res) => {
       actors_id: new ObjectId(actor_id),
       director_id: new ObjectId(director_id),
       genres_id: new ObjectId(genres_id), 
-      image: req.file ? req.file.filename : null
+      image: req.file ?imagePath:null
     };
     const data = await MovieCollection.insertOne(newMovie);
     if (data) {
@@ -124,22 +136,84 @@ exports.AddNewMovie = async (req, res) => {
 };
 
 
-exports.GetSingleMovie=async(req,res)=>{
-  const {id}=req.params;
-  try{
-    const movieCollection=await Movies();
-    const data = await movieCollection.findOne({ _id: new ObjectId(id) });
-    if(data){
-      return res.status(200).send(data);
-    }else{
-      return res.status(400).json({error:"Empty data"});
+exports.GetSingleMovie = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const movieCollection = await Movies();
+
+    const data = await movieCollection.aggregate([
+      {
+        $match: { _id: new ObjectId(id) } // Match the movie by ID
+      },
+      {
+        $lookup: {
+          from: 'actors',
+          localField: 'actors_id',
+          foreignField: '_id',
+          as: 'Actors'
+        }
+      },
+      {
+        $lookup: {
+          from: 'genres',
+          localField: 'genres_id',
+          foreignField: '_id',
+          as: 'Genres'
+        }
+      },
+      {
+        $lookup: {
+          from: 'director',
+          localField: 'director_id',
+          foreignField: '_id',
+          as: 'Directors'
+        }
+      },
+      {
+        $project: {
+          title: 1,
+          description: 1,
+          rating: 1,
+          image: 1,
+          Actors: {
+            _id: 1,
+            actor: 1
+          },
+          Genres: {
+            _id: 1,
+            genres: 1
+          },
+          Directors: {
+            _id: 1,
+            director: 1
+          }
+        }
+      }
+    ]).toArray();
+
+    if (data && data.length > 0) {
+      const movie = data[0]; // Since we are fetching a single movie, access the first element
+
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const imageUrl = movie.image ? `${baseUrl}/${movie.image.replace(/\\/g, '/')}` : null;
+
+      const movieData = {
+        ...movie,
+        image: imageUrl, // Replace the image field with the full URL
+        Actors: Array.isArray(movie.Actors) ? movie.Actors.map(actor => ({ id: actor._id, name: actor.actor })) : [],
+        Genres: Array.isArray(movie.Genres) ? movie.Genres.map(genre => ({ id: genre._id, name: genre.genres })) : [],
+        Directors: Array.isArray(movie.Directors) ? movie.Directors.map(director => ({ id: director._id, name: director.director })) : []
+      };
+
+      return res.status(200).json(movieData);
+    } else {
+      return res.status(400).json({ error: "Empty data" });
     }
-
-
-  }catch(error){
-    return res.status(500).json({error:"Internal server error"})
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    return res.status(500).json({ error: "Internal server error" });
   }
-}
+};
 
 exports.CreateGenres = async (req, res) => {
   const { genres } = req.body;
