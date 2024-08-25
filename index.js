@@ -4,6 +4,7 @@ require("dotenv").config();
 const cors = require("cors");
 const path=require('path')
 const userroute=require('./Routes/user_routes');
+const movieroute=require('./Routes/Movies_routes')
 
 const PORT = 4000;
 
@@ -12,6 +13,7 @@ app.use(express.urlencoded({ extended: true, limit: "500mb" })); // Parse URL-en
 app.use(cors());
 
 app.use('/api',userroute);
+app.use('/api',movieroute);
 
 app.use('/Images', express.static(path.join(__dirname, 'Images')));
 const server=app.listen(PORT, () => {
