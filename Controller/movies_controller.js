@@ -192,14 +192,14 @@ exports.GetSingleMovie = async (req, res) => {
     ]).toArray();
 
     if (data && data.length > 0) {
-      const movie = data[0]; // Since we are fetching a single movie, access the first element
+      const movie = data[0];
 
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       const imageUrl = movie.image ? `${baseUrl}/${movie.image.replace(/\\/g, '/')}` : null;
 
       const movieData = {
         ...movie,
-        image: imageUrl, // Replace the image field with the full URL
+        image: imageUrl,
         Actors: Array.isArray(movie.Actors) ? movie.Actors.map(actor => ({ id: actor._id, name: actor.actor })) : [],
         Genres: Array.isArray(movie.Genres) ? movie.Genres.map(genre => ({ id: genre._id, name: genre.genres })) : [],
         Directors: Array.isArray(movie.Directors) ? movie.Directors.map(director => ({ id: director._id, name: director.director })) : []
@@ -210,7 +210,40 @@ exports.GetSingleMovie = async (req, res) => {
       return res.status(400).json({ error: "Empty data" });
     }
   } catch (error) {
-    console.error(error); // Log the error for debugging
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.EditMovies = async (req, res) => {
+  const { id } = req.params;
+  const { title, description, rating, actor_id, director_id, genres_id } = req.body;
+
+  try {
+    const MovieCollection = await Movies();
+    const imagePath = req.file ? path.join('Images/',req.file.filename) : null;
+    const updatedMovie = {
+      title,
+      description,
+      rating,
+      actors_id: new ObjectId(actor_id),
+      director_id: new ObjectId(director_id),
+      genres_id: new ObjectId(genres_id),
+    };
+
+    if (req.file) {
+      updatedMovie.image =imagePath;
+    }
+    const result = await MovieCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updatedMovie }
+    );
+
+    if (result.modifiedCount > 0) {
+      return res.status(200).json({ message: "Movie updated successfully" });
+    } else {
+      return res.status(400).json({ error: "Movie not found or no changes made" });
+    }
+  } catch (error) {
     return res.status(500).json({ error: "Internal server error" });
   }
 };

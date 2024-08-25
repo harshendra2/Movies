@@ -7,6 +7,7 @@ router.get('/movie/get',controller.GetAllMovies);
 router.get('/movie/get_category',controller.GetAllCategory);
 router.post('/movie/add',upload.single("file"),controller.AddNewMovie);
 router.get('/movie/single_movie/:id',controller.GetSingleMovie);
+router.put('/movie/edit/:id',upload.single("file"),controller.EditMovies);
 
 //Create Movies Parts
 router.post('/movie/creat/genres',controller.CreateGenres);
