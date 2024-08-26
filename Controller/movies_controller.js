@@ -122,9 +122,9 @@ exports.AddNewMovie = async (req, res) => {
       image: req.file ?imagePath:null
     };
 
-    const datas = await MovieCollection.insertOne({title});
-    if (datas) {
-      return res.status(400).json({error: "This movie already created" });
+    const existdata=await MovieCollection.findOne({title});
+    if(existdata){
+      return res.status(400).json({error:"The movie already exists"});
     }
 
     const data = await MovieCollection.insertOne(newMovie);
