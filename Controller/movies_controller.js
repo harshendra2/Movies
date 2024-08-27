@@ -319,7 +319,7 @@ exports.GetSearchMovie = async (req, res) => {
           }
         }
       }
-    ]).toArray();
+    ]).toArray()
 
     if (data && data.length > 0) {
       const baseUrl = `${req.protocol}://${req.get('host')}`;
@@ -388,3 +388,7 @@ exports.CreateActors = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+
+
+/////////////////////////////////////////////////
